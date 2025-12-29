@@ -1,0 +1,26 @@
+import { useApp } from '../../context/AppContext';
+import { Input } from '../ui/Input';
+import { LABELS } from '../../constants/labels';
+
+export function GeneralSettings() {
+  const { settings, updateSettings } = useApp();
+
+  const handleBreakTimeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = parseInt(e.target.value) || 0;
+    updateSettings({ ...settings, break_between_tasks: Math.max(0, value) });
+  };
+
+  return (
+    <div className="bg-white rounded-lg border border-gray-200 p-6">
+      <div className="max-w-xs">
+        <Input
+          type="number"
+          label={LABELS.settings.breakTime}
+          value={settings.break_between_tasks}
+          onChange={handleBreakTimeChange}
+          min={0}
+        />
+      </div>
+    </div>
+  );
+}
