@@ -1,8 +1,16 @@
+import { SessionType } from '../../types';
 import { useApp } from '../../context/AppContext';
 import { GanttChart } from './GanttChart';
 
-export function DoctorTimeline() {
-  const { scheduleResult, doctors, tasks, patients, workingDoctorIds } = useApp();
+interface DoctorTimelineProps {
+  session: SessionType;
+}
+
+export function DoctorTimeline({ session }: DoctorTimelineProps) {
+  const { morning, afternoon, doctors, tasks } = useApp();
+
+  const sessionData = session === 'morning' ? morning : afternoon;
+  const { scheduleResult, workingDoctorIds, patients } = sessionData;
 
   if (!scheduleResult || scheduleResult.scheduled.length === 0) {
     return (
@@ -22,6 +30,7 @@ export function DoctorTimeline() {
         scheduled={scheduleResult.scheduled}
         tasks={tasks}
         patients={patients}
+        session={session}
       />
     </div>
   );

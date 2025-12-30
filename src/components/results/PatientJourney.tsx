@@ -1,10 +1,18 @@
+import { SessionType } from '../../types';
 import { useApp } from '../../context/AppContext';
 import { minutesToTime } from '../../utils/timeUtils';
 import { Badge, getBadgeColor } from '../ui/Badge';
 import { LABELS } from '../../constants/labels';
 
-export function PatientJourney() {
-  const { scheduleResult, patients, tasks, doctors } = useApp();
+interface PatientJourneyProps {
+  session: SessionType;
+}
+
+export function PatientJourney({ session }: PatientJourneyProps) {
+  const { morning, afternoon, tasks, doctors } = useApp();
+
+  const sessionData = session === 'morning' ? morning : afternoon;
+  const { scheduleResult, patients } = sessionData;
 
   if (!scheduleResult) return null;
 
@@ -78,7 +86,7 @@ export function PatientJourney() {
                           {getTaskName(task.task_id)}
                         </Badge>
                         <span className="text-xs text-gray-500 mt-1">
-                          {minutesToTime(task.start_time)}-{minutesToTime(task.patient_end_time)}
+                          {minutesToTime(task.start_time, session)}-{minutesToTime(task.patient_end_time, session)}
                         </span>
                         <span className="text-xs text-gray-400">
                           {getDoctorName(task.doctor_id)}
@@ -97,7 +105,7 @@ export function PatientJourney() {
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                       </svg>
                       <span className="text-sm font-medium">
-                        {LABELS.results.completed}: {minutesToTime(completionTime)}
+                        {LABELS.results.completed}: {minutesToTime(completionTime, session)}
                       </span>
                     </div>
                   </>

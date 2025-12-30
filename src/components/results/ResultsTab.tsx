@@ -1,13 +1,14 @@
 import { useApp } from '../../context/AppContext';
-import { DoctorTimeline } from './DoctorTimeline';
-import { PatientJourney } from './PatientJourney';
-import { UnhandledTasks } from './UnhandledTasks';
+import { SessionResults } from './SessionResults';
 import { LABELS } from '../../constants/labels';
 
 export function ResultsTab() {
-  const { scheduleResult } = useApp();
+  const { morning, afternoon } = useApp();
 
-  if (!scheduleResult) {
+  const hasMorningSchedule = morning.scheduleResult !== null;
+  const hasAfternoonSchedule = afternoon.scheduleResult !== null;
+
+  if (!hasMorningSchedule && !hasAfternoonSchedule) {
     return (
       <div className="text-center py-12 text-gray-500">
         {LABELS.results.noSchedule}
@@ -16,31 +17,20 @@ export function ResultsTab() {
   }
 
   return (
-    <div className="space-y-8">
-      {/* Doctor Timeline (Gantt Chart) */}
-      <section>
-        <h2 className="text-lg font-semibold text-gray-900 mb-4">
-          {LABELS.results.doctorTimeline}
-        </h2>
-        <DoctorTimeline />
-      </section>
+    <div className="space-y-10">
+      {/* Morning Results */}
+      {hasMorningSchedule && (
+        <SessionResults session="morning" />
+      )}
 
-      {/* Patient Journey */}
-      <section>
-        <h2 className="text-lg font-semibold text-gray-900 mb-4">
-          {LABELS.results.patientJourney}
-        </h2>
-        <PatientJourney />
-      </section>
+      {/* Divider */}
+      {hasMorningSchedule && hasAfternoonSchedule && (
+        <div className="border-t-2 border-gray-300" />
+      )}
 
-      {/* Unhandled Tasks */}
-      {scheduleResult.unhandled.length > 0 && (
-        <section>
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">
-            {LABELS.results.unhandled}
-          </h2>
-          <UnhandledTasks />
-        </section>
+      {/* Afternoon Results */}
+      {hasAfternoonSchedule && (
+        <SessionResults session="afternoon" />
       )}
     </div>
   );

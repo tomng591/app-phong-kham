@@ -30,6 +30,10 @@ export const STORAGE_KEYS = {
   SETTINGS: 'clinic-scheduler-settings',
   TASKS: 'clinic-scheduler-tasks',
   DOCTORS: 'clinic-scheduler-doctors',
-  DAILY_PATIENTS: 'clinic-scheduler-daily-patients',
-  WORKING_DOCTORS: 'clinic-scheduler-working-doctors',
+  // Morning session
+  MORNING_PATIENTS: 'clinic-scheduler-morning-patients',
+  MORNING_WORKING_DOCTORS: 'clinic-scheduler-morning-working-doctors',
+  // Afternoon session
+  AFTERNOON_PATIENTS: 'clinic-scheduler-afternoon-patients',
+  AFTERNOON_WORKING_DOCTORS: 'clinic-scheduler-afternoon-working-doctors',
 } as const;

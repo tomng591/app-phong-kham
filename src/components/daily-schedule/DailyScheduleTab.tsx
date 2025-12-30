@@ -1,48 +1,26 @@
-import { WorkingDoctorSelector } from './WorkingDoctorSelector';
-import { PatientList } from './PatientList';
-import { Button } from '../ui/Button';
+import { SessionSection } from './SessionSection';
 import { useApp } from '../../context/AppContext';
-import { LABELS } from '../../constants/labels';
 
 export function DailyScheduleTab() {
-  const { workingDoctorIds, patients, runScheduler } = useApp();
+  const { morning } = useApp();
 
-  const canGenerate = workingDoctorIds.length > 0 && patients.length > 0;
+  // Afternoon can only be generated after morning is generated
+  const canGenerateAfternoon = morning.scheduleResult !== null;
 
   return (
     <div className="space-y-8">
-      {/* Working Doctors Selection */}
-      <section>
-        <h2 className="text-lg font-semibold text-gray-900 mb-4">
-          {LABELS.daily.selectDoctors}
-        </h2>
-        <WorkingDoctorSelector />
-      </section>
+      {/* Morning Session */}
+      <SessionSection session="morning" />
 
-      {/* Patient List */}
-      <section>
-        <h2 className="text-lg font-semibold text-gray-900 mb-4">
-          {LABELS.patient.list}
-        </h2>
-        <PatientList />
-      </section>
+      {/* Divider */}
+      <div className="border-t border-gray-300" />
 
-      {/* Generate Schedule Button */}
-      <section className="flex justify-center pt-4">
-        <Button
-          size="lg"
-          onClick={runScheduler}
-          disabled={!canGenerate}
-          className="px-12"
-        >
-          {LABELS.daily.generateSchedule}
-        </Button>
-      </section>
+      {/* Afternoon Session */}
+      <SessionSection session="afternoon" disabled={!canGenerateAfternoon} />
 
-      {!canGenerate && (
-        <p className="text-center text-sm text-gray-500">
-          {workingDoctorIds.length === 0 && LABELS.messages.noWorkingDoctors}
-          {workingDoctorIds.length > 0 && patients.length === 0 && LABELS.messages.noPatients}
+      {!canGenerateAfternoon && (
+        <p className="text-center text-sm text-amber-600 bg-amber-50 py-3 px-4 rounded-lg">
+          Vui lòng tạo lịch buổi sáng trước khi tạo lịch buổi chiều
         </p>
       )}
     </div>

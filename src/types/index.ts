@@ -25,7 +25,7 @@ export interface ScheduledTask {
   patient_id: string;
   doctor_id: string;
   task_id: string;
-  start_time: number; // minutes from start of day (0 = clinic opening)
+  start_time: number; // minutes from start of session
   doctor_end_time: number; // when doctor is free
   patient_end_time: number; // when patient is free
 }
@@ -42,3 +42,23 @@ export interface ScheduleResult {
 }
 
 export type TabType = 'settings' | 'daily' | 'results';
+
+export type SessionType = 'morning' | 'afternoon';
+
+// Session time constants (in hours and minutes)
+export const SESSION_TIMES = {
+  morning: {
+    startHour: 7,
+    startMinute: 0,
+    endHour: 11,
+    endMinute: 30,
+    durationMinutes: 270, // 4.5 hours
+  },
+  afternoon: {
+    startHour: 13,
+    startMinute: 30,
+    endHour: 18,
+    endMinute: 0,
+    durationMinutes: 270, // 4.5 hours
+  },
+} as const;

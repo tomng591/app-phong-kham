@@ -1,7 +1,15 @@
+import { SessionType } from '../../types';
 import { useApp } from '../../context/AppContext';
 
-export function UnhandledTasks() {
-  const { scheduleResult, patients, tasks } = useApp();
+interface UnhandledTasksProps {
+  session: SessionType;
+}
+
+export function UnhandledTasks({ session }: UnhandledTasksProps) {
+  const { morning, afternoon, tasks } = useApp();
+
+  const sessionData = session === 'morning' ? morning : afternoon;
+  const { scheduleResult, patients } = sessionData;
 
   if (!scheduleResult || scheduleResult.unhandled.length === 0) {
     return null;

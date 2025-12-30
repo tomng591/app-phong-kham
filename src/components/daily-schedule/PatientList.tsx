@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useApp } from '../../context/AppContext';
-import { Patient } from '../../types';
+import { Patient, SessionType } from '../../types';
 import { Table } from '../ui/Table';
 import { Button } from '../ui/Button';
 import { Modal, ConfirmModal } from '../ui/Modal';
@@ -8,12 +8,18 @@ import { Badge, getBadgeColor } from '../ui/Badge';
 import { PatientForm } from './PatientForm';
 import { LABELS } from '../../constants/labels';
 
-export function PatientList() {
-  const { patients, tasks, addPatient, updatePatient, deletePatient, clearPatients } = useApp();
+interface PatientListProps {
+  session: SessionType;
+}
+
+export function PatientList({ session }: PatientListProps) {
+  const { morning, afternoon, tasks, addPatient, updatePatient, deletePatient, clearPatients } = useApp();
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingPatient, setEditingPatient] = useState<Patient | null>(null);
   const [deletingPatient, setDeletingPatient] = useState<Patient | null>(null);
   const [showClearConfirm, setShowClearConfirm] = useState(false);
+
+  const patients = session === 'morning' ? morning.patients : afternoon.patients;
 
   const handleAdd = () => {
     setEditingPatient(null);
@@ -27,9 +33,9 @@ export function PatientList() {
 
   const handleSave = (data: Omit<Patient, 'id'>) => {
     if (editingPatient) {
-      updatePatient({ ...data, id: editingPatient.id });
+      updatePatient(session, { ...data, id: editingPatient.id });
     } else {
-      addPatient(data);
+      addPatient(session, data);
     }
     setIsFormOpen(false);
     setEditingPatient(null);
@@ -37,9 +43,14 @@ export function PatientList() {
 
   const handleDelete = () => {
     if (deletingPatient) {
-      deletePatient(deletingPatient.id);
+      deletePatient(session, deletingPatient.id);
       setDeletingPatient(null);
     }
+  };
+
+  const handleClearAll = () => {
+    clearPatients(session);
+    setShowClearConfirm(false);
   };
 
   const getTaskName = (taskId: string) => {
@@ -70,11 +81,11 @@ export function PatientList() {
   ];
 
   return (
-    <div className="bg-white rounded-lg border border-gray-200 p-6">
+    <div className="bg-white rounded-lg border border-gray-200 p-4">
       <div className="mb-4 flex gap-2">
-        <Button onClick={handleAdd}>+ {LABELS.patient.add}</Button>
+        <Button onClick={handleAdd} size="sm">+ {LABELS.patient.add}</Button>
         {patients.length > 0 && (
-          <Button variant="secondary" onClick={() => setShowClearConfirm(true)}>
+          <Button variant="secondary" size="sm" onClick={() => setShowClearConfirm(true)}>
             Xóa tất cả
           </Button>
         )}
@@ -123,7 +134,7 @@ export function PatientList() {
       <ConfirmModal
         isOpen={showClearConfirm}
         onClose={() => setShowClearConfirm(false)}
-        onConfirm={clearPatients}
+        onConfirm={handleClearAll}
         title="Xóa tất cả bệnh nhân"
         message="Bạn có chắc chắn muốn xóa tất cả bệnh nhân?"
       />

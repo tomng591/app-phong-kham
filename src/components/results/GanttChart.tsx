@@ -1,4 +1,4 @@
-import { Doctor, Task, Patient, ScheduledTask } from '../../types';
+import { Doctor, Task, Patient, ScheduledTask, SessionType } from '../../types';
 import { minutesToTime } from '../../utils/timeUtils';
 import { getBadgeColor } from '../ui/Badge';
 import { LABELS } from '../../constants/labels';
@@ -8,6 +8,7 @@ interface GanttChartProps {
   scheduled: ScheduledTask[];
   tasks: Task[];
   patients: Patient[];
+  session: SessionType;
 }
 
 const SLOT_WIDTH = 40; // pixels per 15-minute slot
@@ -15,7 +16,7 @@ const ROW_HEIGHT = 60; // pixels per doctor row
 const LABEL_WIDTH = 150; // pixels for doctor name column
 const HEADER_HEIGHT = 40; // pixels for time header
 
-export function GanttChart({ doctors, scheduled, tasks, patients }: GanttChartProps) {
+export function GanttChart({ doctors, scheduled, tasks, patients, session }: GanttChartProps) {
   // Calculate time range (in 15-minute slots)
   const maxEndTime = Math.max(
     ...scheduled.map((s) => s.doctor_end_time),
@@ -82,7 +83,7 @@ export function GanttChart({ doctors, scheduled, tasks, patients }: GanttChartPr
             className="flex items-center justify-center border-r border-gray-100 text-xs text-gray-500"
             style={{ width: SLOT_WIDTH }}
           >
-            {i % 2 === 0 ? minutesToTime(i * 15) : ''}
+            {i % 2 === 0 ? minutesToTime(i * 15, session) : ''}
           </div>
         ))}
       </div>
@@ -134,7 +135,7 @@ export function GanttChart({ doctors, scheduled, tasks, patients }: GanttChartPr
                       width: Math.max(width - 2, 30),
                       height: ROW_HEIGHT - 16,
                     }}
-                    title={`${getPatientName(task.patient_id)} - ${getTaskName(task.task_id)}\n${minutesToTime(task.start_time)} - ${minutesToTime(task.doctor_end_time)}`}
+                    title={`${getPatientName(task.patient_id)} - ${getTaskName(task.task_id)}\n${minutesToTime(task.start_time, session)} - ${minutesToTime(task.doctor_end_time, session)}`}
                   >
                     <div className="text-xs font-medium truncate">
                       {getPatientName(task.patient_id)}

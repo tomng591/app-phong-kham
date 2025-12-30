@@ -9,14 +9,17 @@ const tabs: { key: TabType; label: string }[] = [
 ];
 
 export function TabNavigation() {
-  const { activeTab, setActiveTab, scheduleResult } = useApp();
+  const { activeTab, setActiveTab, morning, afternoon } = useApp();
+
+  // Results tab is enabled if either morning or afternoon has a schedule
+  const hasAnySchedule = morning.scheduleResult !== null || afternoon.scheduleResult !== null;
 
   return (
     <div className="border-b border-gray-200">
       <nav className="flex gap-4" aria-label="Tabs">
         {tabs.map((tab) => {
           const isActive = activeTab === tab.key;
-          const isDisabled = tab.key === 'results' && !scheduleResult;
+          const isDisabled = tab.key === 'results' && !hasAnySchedule;
 
           return (
             <button

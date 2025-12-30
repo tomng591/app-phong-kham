@@ -1,23 +1,30 @@
-const CLINIC_START_HOUR = 8; // 8:00 AM
+import { SessionType, SESSION_TIMES } from '../types';
 
 /**
- * Convert internal minutes (from clinic start) to display time (HH:MM)
- * Example: 0 -> "08:00", 60 -> "09:00", 90 -> "09:30"
+ * Convert internal minutes (from session start) to display time (HH:MM)
+ * Morning: 0 -> "07:00", 60 -> "08:00"
+ * Afternoon: 0 -> "13:30", 60 -> "14:30"
  */
-export function minutesToTime(minutes: number): string {
-  const totalMinutes = CLINIC_START_HOUR * 60 + minutes;
+export function minutesToTime(minutes: number, session: SessionType = 'morning'): string {
+  const sessionConfig = SESSION_TIMES[session];
+  const baseMinutes = sessionConfig.startHour * 60 + sessionConfig.startMinute;
+  const totalMinutes = baseMinutes + minutes;
   const hours = Math.floor(totalMinutes / 60);
   const mins = totalMinutes % 60;
   return `${hours.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}`;
 }
 
 /**
- * Convert display time (HH:MM) to internal minutes
- * Example: "08:00" -> 0, "09:00" -> 60, "09:30" -> 90
+ * Convert display time (HH:MM) to internal minutes for a session
+ * Morning: "07:00" -> 0, "08:00" -> 60
+ * Afternoon: "13:30" -> 0, "14:30" -> 60
  */
-export function timeToMinutes(time: string): number {
+export function timeToMinutes(time: string, session: SessionType = 'morning'): number {
+  const sessionConfig = SESSION_TIMES[session];
+  const baseMinutes = sessionConfig.startHour * 60 + sessionConfig.startMinute;
   const [hours, mins] = time.split(':').map(Number);
-  return (hours - CLINIC_START_HOUR) * 60 + mins;
+  const totalMinutes = hours * 60 + mins;
+  return totalMinutes - baseMinutes;
 }
 
 /**
@@ -34,4 +41,21 @@ export function formatDuration(minutes: number): string {
     return `${hours}h`;
   }
   return `${hours}h ${mins}'`;
+}
+
+/**
+ * Get session label in Vietnamese
+ */
+export function getSessionLabel(session: SessionType): string {
+  return session === 'morning' ? 'Buổi sáng' : 'Buổi chiều';
+}
+
+/**
+ * Get session time range string
+ */
+export function getSessionTimeRange(session: SessionType): string {
+  const config = SESSION_TIMES[session];
+  const startTime = `${config.startHour.toString().padStart(2, '0')}:${config.startMinute.toString().padStart(2, '0')}`;
+  const endTime = `${config.endHour.toString().padStart(2, '0')}:${config.endMinute.toString().padStart(2, '0')}`;
+  return `${startTime} - ${endTime}`;
 }

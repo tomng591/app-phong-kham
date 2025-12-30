@@ -1,19 +1,26 @@
 import { createContext, useContext, ReactNode, useCallback } from 'react';
-import { Settings, Task, Doctor, Patient, ScheduleResult, TabType } from '../types';
+import { Settings, Task, Doctor, Patient, ScheduleResult, TabType, SessionType } from '../types';
 import { useLocalStorage, STORAGE_KEYS } from '../hooks/useLocalStorage';
 import { generateId } from '../utils/idGenerator';
 import { generateSchedule } from '../utils/scheduler';
 import { useState } from 'react';
+
+interface SessionData {
+  patients: Patient[];
+  workingDoctorIds: string[];
+  scheduleResult: ScheduleResult | null;
+}
 
 interface AppContextType {
   // Data
   settings: Settings;
   tasks: Task[];
   doctors: Doctor[];
-  patients: Patient[];
-  workingDoctorIds: string[];
-  scheduleResult: ScheduleResult | null;
   activeTab: TabType;
+
+  // Session data
+  morning: SessionData;
+  afternoon: SessionData;
 
   // Settings actions
   updateSettings: (settings: Settings) => void;
@@ -28,18 +35,19 @@ interface AppContextType {
   updateDoctor: (doctor: Doctor) => void;
   deleteDoctor: (id: string) => void;
 
-  // Patient actions
-  addPatient: (patient: Omit<Patient, 'id'>) => void;
-  updatePatient: (patient: Patient) => void;
-  deletePatient: (id: string) => void;
-  clearPatients: () => void;
+  // Patient actions (session-specific)
+  addPatient: (session: SessionType, patient: Omit<Patient, 'id'>) => void;
+  updatePatient: (session: SessionType, patient: Patient) => void;
+  deletePatient: (session: SessionType, id: string) => void;
+  clearPatients: (session: SessionType) => void;
 
-  // Daily actions
-  setWorkingDoctors: (ids: string[]) => void;
+  // Daily actions (session-specific)
+  setWorkingDoctors: (session: SessionType, ids: string[]) => void;
 
   // Schedule actions
-  runScheduler: () => void;
-  clearSchedule: () => void;
+  runScheduler: (session: SessionType) => void;
+  clearSchedule: (session: SessionType) => void;
+  clearAllSchedules: () => void;
 
   // Navigation
   setActiveTab: (tab: TabType) => void;
@@ -59,17 +67,30 @@ export function AppProvider({ children }: { children: ReactNode }) {
   );
   const [tasks, setTasks] = useLocalStorage<Task[]>(STORAGE_KEYS.TASKS, []);
   const [doctors, setDoctors] = useLocalStorage<Doctor[]>(STORAGE_KEYS.DOCTORS, []);
-  const [patients, setPatients] = useLocalStorage<Patient[]>(
-    STORAGE_KEYS.DAILY_PATIENTS,
+
+  // Morning session data
+  const [morningPatients, setMorningPatients] = useLocalStorage<Patient[]>(
+    STORAGE_KEYS.MORNING_PATIENTS,
     []
   );
-  const [workingDoctorIds, setWorkingDoctorIds] = useLocalStorage<string[]>(
-    STORAGE_KEYS.WORKING_DOCTORS,
+  const [morningWorkingDoctorIds, setMorningWorkingDoctorIds] = useLocalStorage<string[]>(
+    STORAGE_KEYS.MORNING_WORKING_DOCTORS,
+    []
+  );
+
+  // Afternoon session data
+  const [afternoonPatients, setAfternoonPatients] = useLocalStorage<Patient[]>(
+    STORAGE_KEYS.AFTERNOON_PATIENTS,
+    []
+  );
+  const [afternoonWorkingDoctorIds, setAfternoonWorkingDoctorIds] = useLocalStorage<string[]>(
+    STORAGE_KEYS.AFTERNOON_WORKING_DOCTORS,
     []
   );
 
   // Non-persistent state
-  const [scheduleResult, setScheduleResult] = useState<ScheduleResult | null>(null);
+  const [morningScheduleResult, setMorningScheduleResult] = useState<ScheduleResult | null>(null);
+  const [afternoonScheduleResult, setAfternoonScheduleResult] = useState<ScheduleResult | null>(null);
   const [activeTab, setActiveTab] = useState<TabType>('settings');
 
   // Settings actions
@@ -96,14 +117,20 @@ export function AppProvider({ children }: { children: ReactNode }) {
         can_do: d.can_do.filter((taskId) => taskId !== id),
       }))
     );
-    // Also remove this task from patients' needs lists
-    setPatients((prev) =>
+    // Also remove this task from patients' needs lists (both sessions)
+    setMorningPatients((prev) =>
       prev.map((p) => ({
         ...p,
         needs: p.needs.filter((taskId) => taskId !== id),
       }))
     );
-  }, [setTasks, setDoctors, setPatients]);
+    setAfternoonPatients((prev) =>
+      prev.map((p) => ({
+        ...p,
+        needs: p.needs.filter((taskId) => taskId !== id),
+      }))
+    );
+  }, [setTasks, setDoctors, setMorningPatients, setAfternoonPatients]);
 
   // Doctor actions
   const addDoctor = useCallback((doctor: Omit<Doctor, 'id'>) => {
@@ -117,53 +144,102 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const deleteDoctor = useCallback((id: string) => {
     setDoctors((prev) => prev.filter((d) => d.id !== id));
-    // Also remove from working doctors
-    setWorkingDoctorIds((prev) => prev.filter((dId) => dId !== id));
-  }, [setDoctors, setWorkingDoctorIds]);
+    // Also remove from working doctors (both sessions)
+    setMorningWorkingDoctorIds((prev) => prev.filter((dId) => dId !== id));
+    setAfternoonWorkingDoctorIds((prev) => prev.filter((dId) => dId !== id));
+  }, [setDoctors, setMorningWorkingDoctorIds, setAfternoonWorkingDoctorIds]);
 
-  // Patient actions
-  const addPatient = useCallback((patient: Omit<Patient, 'id'>) => {
+  // Patient actions (session-specific)
+  const addPatient = useCallback((session: SessionType, patient: Omit<Patient, 'id'>) => {
     const newPatient: Patient = { ...patient, id: generateId() };
-    setPatients((prev) => [...prev, newPatient]);
-  }, [setPatients]);
+    if (session === 'morning') {
+      setMorningPatients((prev) => [...prev, newPatient]);
+    } else {
+      setAfternoonPatients((prev) => [...prev, newPatient]);
+    }
+  }, [setMorningPatients, setAfternoonPatients]);
 
-  const updatePatient = useCallback((patient: Patient) => {
-    setPatients((prev) => prev.map((p) => (p.id === patient.id ? patient : p)));
-  }, [setPatients]);
+  const updatePatient = useCallback((session: SessionType, patient: Patient) => {
+    if (session === 'morning') {
+      setMorningPatients((prev) => prev.map((p) => (p.id === patient.id ? patient : p)));
+    } else {
+      setAfternoonPatients((prev) => prev.map((p) => (p.id === patient.id ? patient : p)));
+    }
+  }, [setMorningPatients, setAfternoonPatients]);
 
-  const deletePatient = useCallback((id: string) => {
-    setPatients((prev) => prev.filter((p) => p.id !== id));
-  }, [setPatients]);
+  const deletePatient = useCallback((session: SessionType, id: string) => {
+    if (session === 'morning') {
+      setMorningPatients((prev) => prev.filter((p) => p.id !== id));
+    } else {
+      setAfternoonPatients((prev) => prev.filter((p) => p.id !== id));
+    }
+  }, [setMorningPatients, setAfternoonPatients]);
 
-  const clearPatients = useCallback(() => {
-    setPatients([]);
-  }, [setPatients]);
+  const clearPatients = useCallback((session: SessionType) => {
+    if (session === 'morning') {
+      setMorningPatients([]);
+    } else {
+      setAfternoonPatients([]);
+    }
+  }, [setMorningPatients, setAfternoonPatients]);
 
-  // Daily actions
-  const setWorkingDoctors = useCallback((ids: string[]) => {
-    setWorkingDoctorIds(ids);
-  }, [setWorkingDoctorIds]);
+  // Daily actions (session-specific)
+  const setWorkingDoctors = useCallback((session: SessionType, ids: string[]) => {
+    if (session === 'morning') {
+      setMorningWorkingDoctorIds(ids);
+    } else {
+      setAfternoonWorkingDoctorIds(ids);
+    }
+  }, [setMorningWorkingDoctorIds, setAfternoonWorkingDoctorIds]);
 
   // Schedule actions
-  const runScheduler = useCallback(() => {
+  const runScheduler = useCallback((session: SessionType) => {
+    const workingDoctorIds = session === 'morning' ? morningWorkingDoctorIds : afternoonWorkingDoctorIds;
+    const patients = session === 'morning' ? morningPatients : afternoonPatients;
     const workingDoctors = doctors.filter((d) => workingDoctorIds.includes(d.id));
     const result = generateSchedule(settings, tasks, workingDoctors, patients);
-    setScheduleResult(result);
-    setActiveTab('results');
-  }, [settings, tasks, doctors, patients, workingDoctorIds]);
 
-  const clearSchedule = useCallback(() => {
-    setScheduleResult(null);
+    if (session === 'morning') {
+      setMorningScheduleResult(result);
+    } else {
+      setAfternoonScheduleResult(result);
+    }
+    setActiveTab('results');
+  }, [settings, tasks, doctors, morningPatients, afternoonPatients, morningWorkingDoctorIds, afternoonWorkingDoctorIds]);
+
+  const clearSchedule = useCallback((session: SessionType) => {
+    if (session === 'morning') {
+      setMorningScheduleResult(null);
+    } else {
+      setAfternoonScheduleResult(null);
+    }
   }, []);
+
+  const clearAllSchedules = useCallback(() => {
+    setMorningScheduleResult(null);
+    setAfternoonScheduleResult(null);
+  }, []);
+
+  // Session data objects
+  const morning: SessionData = {
+    patients: morningPatients,
+    workingDoctorIds: morningWorkingDoctorIds,
+    scheduleResult: morningScheduleResult,
+  };
+
+  const afternoon: SessionData = {
+    patients: afternoonPatients,
+    workingDoctorIds: afternoonWorkingDoctorIds,
+    scheduleResult: afternoonScheduleResult,
+  };
 
   const value: AppContextType = {
     settings,
     tasks,
     doctors,
-    patients,
-    workingDoctorIds,
-    scheduleResult,
     activeTab,
+    morning,
+    afternoon,
     updateSettings,
     addTask,
     updateTask,
@@ -178,6 +254,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setWorkingDoctors,
     runScheduler,
     clearSchedule,
+    clearAllSchedules,
     setActiveTab,
   };
 
