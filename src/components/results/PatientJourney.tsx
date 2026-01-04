@@ -67,8 +67,12 @@ export function PatientJourney({ session }: PatientJourneyProps) {
         return (
           <div key={patient.id} className="p-4">
             <div className="flex items-start gap-4">
+              {/* Patient ID */}
+              <div className="w-10 text-center font-bold text-gray-600">
+                {patient.daily_id}
+              </div>
               {/* Patient Name */}
-              <div className="font-medium text-gray-900 min-w-[120px]">
+              <div className="font-medium text-gray-900 min-w-[100px]">
                 {patient.name}
               </div>
 

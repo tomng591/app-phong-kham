@@ -8,7 +8,7 @@ import { LABELS } from '../../constants/labels';
 
 interface PatientFormProps {
   initialData?: Patient;
-  onSave: (data: Omit<Patient, 'id'>) => void;
+  onSave: (data: Omit<Patient, 'id' | 'daily_id'>) => void;
   onCancel: () => void;
 }
 

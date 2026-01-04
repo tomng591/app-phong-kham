@@ -31,9 +31,9 @@ export function PatientList({ session }: PatientListProps) {
     setIsFormOpen(true);
   };
 
-  const handleSave = (data: Omit<Patient, 'id'>) => {
+  const handleSave = (data: Omit<Patient, 'id' | 'daily_id'>) => {
     if (editingPatient) {
-      updatePatient(session, { ...data, id: editingPatient.id });
+      updatePatient(session, { ...data, id: editingPatient.id, daily_id: editingPatient.daily_id });
     } else {
       addPatient(session, data);
     }
@@ -58,6 +58,7 @@ export function PatientList({ session }: PatientListProps) {
   };
 
   const columns = [
+    { header: LABELS.patient.id, accessor: 'daily_id' as const, className: 'w-16 text-center' },
     { header: LABELS.patient.name, accessor: 'name' as const },
     {
       header: LABELS.patient.needs,

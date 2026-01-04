@@ -1,5 +1,5 @@
 export interface Settings {
-  break_between_tasks: number; // minutes - mandatory break for doctors between tasks
+  break_between_tasks: number; // minutes - mandatory break for patients between tasks
 }
 
 export interface Task {
@@ -17,6 +17,7 @@ export interface Doctor {
 
 export interface Patient {
   id: string;
+  daily_id: number; // incremental daily ID (1, 2, 3...), resets each day
   name: string;
   needs: string[]; // array of task IDs this patient needs
 }

@@ -36,7 +36,7 @@ interface AppContextType {
   deleteDoctor: (id: string) => void;
 
   // Patient actions (session-specific)
-  addPatient: (session: SessionType, patient: Omit<Patient, 'id'>) => void;
+  addPatient: (session: SessionType, patient: Omit<Patient, 'id' | 'daily_id'>) => void;
   updatePatient: (session: SessionType, patient: Patient) => void;
   deletePatient: (session: SessionType, id: string) => void;
   clearPatients: (session: SessionType) => void;
@@ -149,15 +149,24 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setAfternoonWorkingDoctorIds((prev) => prev.filter((dId) => dId !== id));
   }, [setDoctors, setMorningWorkingDoctorIds, setAfternoonWorkingDoctorIds]);
 
+  // Helper to get next daily_id across both sessions
+  const getNextDailyId = useCallback(() => {
+    const allPatients = [...morningPatients, ...afternoonPatients];
+    if (allPatients.length === 0) return 1;
+    const maxId = Math.max(...allPatients.map((p) => p.daily_id || 0));
+    return maxId + 1;
+  }, [morningPatients, afternoonPatients]);
+
   // Patient actions (session-specific)
-  const addPatient = useCallback((session: SessionType, patient: Omit<Patient, 'id'>) => {
-    const newPatient: Patient = { ...patient, id: generateId() };
+  const addPatient = useCallback((session: SessionType, patient: Omit<Patient, 'id' | 'daily_id'>) => {
+    const daily_id = getNextDailyId();
+    const newPatient: Patient = { ...patient, id: generateId(), daily_id };
     if (session === 'morning') {
       setMorningPatients((prev) => [...prev, newPatient]);
     } else {
       setAfternoonPatients((prev) => [...prev, newPatient]);
     }
-  }, [setMorningPatients, setAfternoonPatients]);
+  }, [setMorningPatients, setAfternoonPatients, getNextDailyId]);
 
   const updatePatient = useCallback((session: SessionType, patient: Patient) => {
     if (session === 'morning') {

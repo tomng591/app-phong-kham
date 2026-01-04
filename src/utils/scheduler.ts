@@ -2,13 +2,13 @@ import { Settings, Task, Doctor, Patient, ScheduleResult, ScheduledTask, Unhandl
 
 interface DoctorState {
   id: string;
-  freeAt: number; // includes break time for next task
+  freeAt: number;
   canDo: Set<string>;
 }
 
 interface PatientState {
   id: string;
-  freeAt: number;
+  freeAt: number; // includes break time for next task
 }
 
 /**
@@ -19,9 +19,12 @@ interface PatientState {
  * 2. Build queue of (patient, task) pairs from patient needs
  * 3. For each pair:
  *    - Find doctors who can perform the task
- *    - Find earliest time when both doctor (with break) and patient are free
+ *    - Find earliest time when both doctor and patient (with break) are free
  *    - Schedule the task
  * 4. Mark as unhandled if no doctor can perform the task
+ *
+ * Note: Break time is applied to patients, not doctors.
+ * Doctors can work continuously, but patients need rest between tasks.
  */
 export function generateSchedule(
   settings: Settings,
@@ -119,9 +122,11 @@ export function generateSchedule(
         patient_end_time: patientEndTime,
       });
 
-      // Update states (doctor gets break time added)
-      bestDoctor.freeAt = doctorEndTime + settings.break_between_tasks;
-      patientState.freeAt = patientEndTime;
+      // Update states
+      // Doctor can work immediately after finishing (no break)
+      bestDoctor.freeAt = doctorEndTime;
+      // Patient needs break time before next task
+      patientState.freeAt = patientEndTime + settings.break_between_tasks;
     }
   }
 

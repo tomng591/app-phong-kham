@@ -19,7 +19,7 @@ export const LABELS = {
   // Settings
   settings: {
     title: 'Cài đặt chung',
-    breakTime: 'Thời gian nghỉ giữa các công việc (phút)',
+    breakTime: 'Thời gian nghỉ của bệnh nhân giữa các công việc (phút)',
     taskManagement: 'Quản lý công việc',
     doctorManagement: 'Quản lý bác sĩ',
   },
@@ -41,6 +41,7 @@ export const LABELS = {
 
   // Patients
   patient: {
+    id: 'STT',
     name: 'Tên bệnh nhân',
     needs: 'Công việc cần làm',
     add: 'Thêm bệnh nhân',
