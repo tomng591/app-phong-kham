@@ -1,6 +1,7 @@
 import { GeneralSettings } from './GeneralSettings';
 import { TaskManagement } from './TaskManagement';
 import { DoctorManagement } from './DoctorManagement';
+import { DataExportImport } from './DataExportImport';
 import { LABELS } from '../../constants/labels';
 
 export function SettingsTab() {
@@ -28,6 +29,14 @@ export function SettingsTab() {
           {LABELS.settings.doctorManagement}
         </h2>
         <DoctorManagement />
+      </section>
+
+      {/* Data Export/Import */}
+      <section>
+        <h2 className="text-lg font-semibold text-gray-900 mb-4">
+          {LABELS.settings.dataManagement}
+        </h2>
+        <DataExportImport />
       </section>
     </div>
   );

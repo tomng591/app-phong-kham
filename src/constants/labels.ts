@@ -22,6 +22,7 @@ export const LABELS = {
     breakTime: 'Thời gian nghỉ của bệnh nhân giữa các công việc (phút)',
     taskManagement: 'Quản lý công việc',
     doctorManagement: 'Quản lý bác sĩ',
+    dataManagement: 'Quản lý dữ liệu',
   },
 
   // Tasks
