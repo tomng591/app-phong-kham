@@ -2,6 +2,7 @@ import { SessionType } from '../../types';
 import { useApp } from '../../context/AppContext';
 import { WorkingDoctorSelector } from './WorkingDoctorSelector';
 import { PatientList } from './PatientList';
+import { ManualScheduleSection } from './ManualScheduleSection';
 import { Button } from '../ui/Button';
 import { getSessionLabel, getSessionTimeRange } from '../../utils/timeUtils';
 import { LABELS } from '../../constants/labels';
@@ -56,6 +57,9 @@ export function SessionSection({ session, disabled = false }: SessionSectionProp
         </h3>
         <PatientList session={session} />
       </div>
+
+      {/* Manual Schedule Section */}
+      <ManualScheduleSection session={session} />
 
       {/* Generate Button */}
       <div className="flex justify-center pt-2">

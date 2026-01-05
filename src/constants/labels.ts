@@ -30,6 +30,23 @@ export const LABELS = {
     doctorDuration: 'Thời gian bác sĩ (phút)',
     patientDuration: 'Thời gian bệnh nhân (phút)',
     add: 'Thêm công việc',
+    isManualSchedulable: 'Cho phép đặt lịch thủ công',
+  },
+
+  // Manual Appointments
+  manualAppointment: {
+    title: 'Đặt lịch thủ công',
+    noTasks: 'Không có công việc nào cần đặt lịch thủ công',
+    patient: 'Bệnh nhân',
+    task: 'Công việc',
+    time: 'Thời gian',
+    doctor: 'Bác sĩ',
+    selectDoctor: 'Chọn bác sĩ',
+    selectTime: 'Chọn giờ',
+    add: 'Thêm lịch',
+    conflictDoctor: 'Bác sĩ {name} đã có lịch lúc {time}',
+    conflictPatient: 'Bệnh nhân {name} đã có lịch lúc {time}',
+    conflictTimeBounds: 'Thời gian {time} nằm ngoài ca làm việc',
   },
 
   // Doctors

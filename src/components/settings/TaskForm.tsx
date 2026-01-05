@@ -18,6 +18,9 @@ export function TaskForm({ initialData, onSave, onCancel }: TaskFormProps) {
   const [patientDuration, setPatientDuration] = useState(
     initialData?.patient_duration?.toString() || '30'
   );
+  const [isManualSchedulable, setIsManualSchedulable] = useState(
+    initialData?.is_manual_schedulable || false
+  );
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -27,6 +30,7 @@ export function TaskForm({ initialData, onSave, onCancel }: TaskFormProps) {
       name: name.trim(),
       doctor_duration: parseInt(doctorDuration) || 30,
       patient_duration: parseInt(patientDuration) || 30,
+      is_manual_schedulable: isManualSchedulable,
     });
   };
 
@@ -58,6 +62,19 @@ export function TaskForm({ initialData, onSave, onCancel }: TaskFormProps) {
         min={1}
         required
       />
+
+      <div className="flex items-center gap-2">
+        <input
+          type="checkbox"
+          id="isManualSchedulable"
+          checked={isManualSchedulable}
+          onChange={(e) => setIsManualSchedulable(e.target.checked)}
+          className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+        />
+        <label htmlFor="isManualSchedulable" className="text-sm font-medium text-gray-700">
+          {LABELS.task.isManualSchedulable}
+        </label>
+      </div>
 
       <div className="flex justify-end gap-3 pt-4">
         <Button type="button" variant="secondary" onClick={onCancel}>

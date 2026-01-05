@@ -1,5 +1,5 @@
 import { createContext, useContext, ReactNode, useCallback } from 'react';
-import { Settings, Task, Doctor, Patient, ScheduleResult, TabType, SessionType } from '../types';
+import { Settings, Task, Doctor, Patient, ScheduleResult, TabType, SessionType, ManualAppointment } from '../types';
 import { useLocalStorage, STORAGE_KEYS } from '../hooks/useLocalStorage';
 import { generateId } from '../utils/idGenerator';
 import { generateSchedule } from '../utils/scheduler';
@@ -8,6 +8,7 @@ import { useState } from 'react';
 interface SessionData {
   patients: Patient[];
   workingDoctorIds: string[];
+  manualAppointments: ManualAppointment[];
   scheduleResult: ScheduleResult | null;
 }
 
@@ -43,6 +44,12 @@ interface AppContextType {
 
   // Daily actions (session-specific)
   setWorkingDoctors: (session: SessionType, ids: string[]) => void;
+
+  // Manual appointment actions (session-specific)
+  addManualAppointment: (session: SessionType, appointment: Omit<ManualAppointment, 'id'>) => void;
+  updateManualAppointment: (session: SessionType, appointment: ManualAppointment) => void;
+  deleteManualAppointment: (session: SessionType, id: string) => void;
+  clearManualAppointments: (session: SessionType) => void;
 
   // Schedule actions
   runScheduler: (session: SessionType) => void;
@@ -88,6 +95,16 @@ export function AppProvider({ children }: { children: ReactNode }) {
     []
   );
 
+  // Manual appointments (persisted)
+  const [morningManualAppointments, setMorningManualAppointments] = useLocalStorage<ManualAppointment[]>(
+    STORAGE_KEYS.MORNING_MANUAL_APPOINTMENTS,
+    []
+  );
+  const [afternoonManualAppointments, setAfternoonManualAppointments] = useLocalStorage<ManualAppointment[]>(
+    STORAGE_KEYS.AFTERNOON_MANUAL_APPOINTMENTS,
+    []
+  );
+
   // Non-persistent state
   const [morningScheduleResult, setMorningScheduleResult] = useState<ScheduleResult | null>(null);
   const [afternoonScheduleResult, setAfternoonScheduleResult] = useState<ScheduleResult | null>(null);
@@ -130,7 +147,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
         needs: p.needs.filter((taskId) => taskId !== id),
       }))
     );
-  }, [setTasks, setDoctors, setMorningPatients, setAfternoonPatients]);
+    // Also remove from manual appointments (both sessions)
+    setMorningManualAppointments((prev) => prev.filter((a) => a.task_id !== id));
+    setAfternoonManualAppointments((prev) => prev.filter((a) => a.task_id !== id));
+  }, [setTasks, setDoctors, setMorningPatients, setAfternoonPatients, setMorningManualAppointments, setAfternoonManualAppointments]);
 
   // Doctor actions
   const addDoctor = useCallback((doctor: Omit<Doctor, 'id'>) => {
@@ -147,7 +167,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
     // Also remove from working doctors (both sessions)
     setMorningWorkingDoctorIds((prev) => prev.filter((dId) => dId !== id));
     setAfternoonWorkingDoctorIds((prev) => prev.filter((dId) => dId !== id));
-  }, [setDoctors, setMorningWorkingDoctorIds, setAfternoonWorkingDoctorIds]);
+    // Also remove from manual appointments (both sessions)
+    setMorningManualAppointments((prev) => prev.filter((a) => a.doctor_id !== id));
+    setAfternoonManualAppointments((prev) => prev.filter((a) => a.doctor_id !== id));
+  }, [setDoctors, setMorningWorkingDoctorIds, setAfternoonWorkingDoctorIds, setMorningManualAppointments, setAfternoonManualAppointments]);
 
   // Helper to get next daily_id across both sessions
   const getNextDailyId = useCallback(() => {
@@ -179,18 +202,24 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const deletePatient = useCallback((session: SessionType, id: string) => {
     if (session === 'morning') {
       setMorningPatients((prev) => prev.filter((p) => p.id !== id));
+      // Also remove from manual appointments
+      setMorningManualAppointments((prev) => prev.filter((a) => a.patient_id !== id));
     } else {
       setAfternoonPatients((prev) => prev.filter((p) => p.id !== id));
+      // Also remove from manual appointments
+      setAfternoonManualAppointments((prev) => prev.filter((a) => a.patient_id !== id));
     }
-  }, [setMorningPatients, setAfternoonPatients]);
+  }, [setMorningPatients, setAfternoonPatients, setMorningManualAppointments, setAfternoonManualAppointments]);
 
   const clearPatients = useCallback((session: SessionType) => {
     if (session === 'morning') {
       setMorningPatients([]);
+      setMorningManualAppointments([]);
     } else {
       setAfternoonPatients([]);
+      setAfternoonManualAppointments([]);
     }
-  }, [setMorningPatients, setAfternoonPatients]);
+  }, [setMorningPatients, setAfternoonPatients, setMorningManualAppointments, setAfternoonManualAppointments]);
 
   // Daily actions (session-specific)
   const setWorkingDoctors = useCallback((session: SessionType, ids: string[]) => {
@@ -201,12 +230,47 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
   }, [setMorningWorkingDoctorIds, setAfternoonWorkingDoctorIds]);
 
+  // Manual appointment actions
+  const addManualAppointment = useCallback((session: SessionType, appointment: Omit<ManualAppointment, 'id'>) => {
+    const newAppointment: ManualAppointment = { ...appointment, id: generateId() };
+    if (session === 'morning') {
+      setMorningManualAppointments((prev) => [...prev, newAppointment]);
+    } else {
+      setAfternoonManualAppointments((prev) => [...prev, newAppointment]);
+    }
+  }, [setMorningManualAppointments, setAfternoonManualAppointments]);
+
+  const updateManualAppointment = useCallback((session: SessionType, appointment: ManualAppointment) => {
+    if (session === 'morning') {
+      setMorningManualAppointments((prev) => prev.map((a) => (a.id === appointment.id ? appointment : a)));
+    } else {
+      setAfternoonManualAppointments((prev) => prev.map((a) => (a.id === appointment.id ? appointment : a)));
+    }
+  }, [setMorningManualAppointments, setAfternoonManualAppointments]);
+
+  const deleteManualAppointment = useCallback((session: SessionType, id: string) => {
+    if (session === 'morning') {
+      setMorningManualAppointments((prev) => prev.filter((a) => a.id !== id));
+    } else {
+      setAfternoonManualAppointments((prev) => prev.filter((a) => a.id !== id));
+    }
+  }, [setMorningManualAppointments, setAfternoonManualAppointments]);
+
+  const clearManualAppointments = useCallback((session: SessionType) => {
+    if (session === 'morning') {
+      setMorningManualAppointments([]);
+    } else {
+      setAfternoonManualAppointments([]);
+    }
+  }, [setMorningManualAppointments, setAfternoonManualAppointments]);
+
   // Schedule actions
   const runScheduler = useCallback((session: SessionType) => {
     const workingDoctorIds = session === 'morning' ? morningWorkingDoctorIds : afternoonWorkingDoctorIds;
     const patients = session === 'morning' ? morningPatients : afternoonPatients;
+    const manualAppointments = session === 'morning' ? morningManualAppointments : afternoonManualAppointments;
     const workingDoctors = doctors.filter((d) => workingDoctorIds.includes(d.id));
-    const result = generateSchedule(settings, tasks, workingDoctors, patients);
+    const result = generateSchedule(settings, tasks, workingDoctors, patients, manualAppointments, session);
 
     if (session === 'morning') {
       setMorningScheduleResult(result);
@@ -214,7 +278,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       setAfternoonScheduleResult(result);
     }
     setActiveTab('results');
-  }, [settings, tasks, doctors, morningPatients, afternoonPatients, morningWorkingDoctorIds, afternoonWorkingDoctorIds]);
+  }, [settings, tasks, doctors, morningPatients, afternoonPatients, morningWorkingDoctorIds, afternoonWorkingDoctorIds, morningManualAppointments, afternoonManualAppointments]);
 
   const clearSchedule = useCallback((session: SessionType) => {
     if (session === 'morning') {
@@ -233,12 +297,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const morning: SessionData = {
     patients: morningPatients,
     workingDoctorIds: morningWorkingDoctorIds,
+    manualAppointments: morningManualAppointments,
     scheduleResult: morningScheduleResult,
   };
 
   const afternoon: SessionData = {
     patients: afternoonPatients,
     workingDoctorIds: afternoonWorkingDoctorIds,
+    manualAppointments: afternoonManualAppointments,
     scheduleResult: afternoonScheduleResult,
   };
 
@@ -261,6 +327,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
     deletePatient,
     clearPatients,
     setWorkingDoctors,
+    addManualAppointment,
+    updateManualAppointment,
+    deleteManualAppointment,
+    clearManualAppointments,
     runScheduler,
     clearSchedule,
     clearAllSchedules,
