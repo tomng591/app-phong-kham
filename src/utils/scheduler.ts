@@ -237,9 +237,14 @@ export function generateSchedule(
     doctorDuration: number,
     patientDuration: number
   ): number | null => {
-    let candidateStart = Math.max(doctorState.freeAt, patientState.freeAt);
+    // Start from 0 to find gaps between busy periods (not from freeAt which would miss gaps)
+    let candidateStart = 0;
     const sessionDuration = SESSION_TIMES[session].durationMinutes;
-    const maxIterations = 100; // Safety limit
+    const maxIterations = 200; // Safety limit (increased for more complex schedules)
+
+    // Sort busy periods by start time for efficient gap finding
+    const sortedDoctorPeriods = [...doctorState.busyPeriods].sort((a, b) => a.start - b.start);
+    const sortedPatientPeriods = [...patientState.busyPeriods].sort((a, b) => a.start - b.start);
 
     for (let i = 0; i < maxIterations; i++) {
       const doctorEnd = candidateStart + doctorDuration;
@@ -252,7 +257,12 @@ export function generateSchedule(
 
       // Check if doctor is busy during this period
       let doctorConflict = false;
-      for (const period of doctorState.busyPeriods) {
+      for (const period of sortedDoctorPeriods) {
+        // Skip periods that end before our candidate starts
+        if (period.end <= candidateStart) continue;
+        // If period starts after our candidate ends, no more conflicts possible
+        if (period.start >= doctorEnd) break;
+
         if (periodsOverlap(candidateStart, doctorEnd, period.start, period.end)) {
           candidateStart = period.end; // Try after this busy period
           doctorConflict = true;
@@ -263,7 +273,12 @@ export function generateSchedule(
 
       // Check if patient is busy during this period
       let patientConflict = false;
-      for (const period of patientState.busyPeriods) {
+      for (const period of sortedPatientPeriods) {
+        // Skip periods that end before our candidate starts (with break time consideration)
+        if (period.end + settings.break_between_tasks <= candidateStart) continue;
+        // If period starts after our candidate ends (with break), no more conflicts possible
+        if (period.start >= patientEnd + settings.break_between_tasks) break;
+
         if (periodsOverlap(candidateStart, patientEnd, period.start, period.end)) {
           candidateStart = period.end + settings.break_between_tasks; // Try after this busy period with break
           patientConflict = true;
