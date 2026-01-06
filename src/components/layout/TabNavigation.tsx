@@ -6,6 +6,7 @@ const tabs: { key: TabType; label: string }[] = [
   { key: 'settings', label: LABELS.tabs.settings },
   { key: 'daily', label: LABELS.tabs.daily },
   { key: 'results', label: LABELS.tabs.results },
+  { key: 'history', label: LABELS.tabs.history },
 ];
 
 export function TabNavigation() {

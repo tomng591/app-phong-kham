@@ -4,6 +4,7 @@ export const LABELS = {
     settings: 'Cài đặt',
     daily: 'Lịch hàng ngày',
     results: 'Kết quả',
+    history: 'Lịch sử',
   },
 
   // Common actions
@@ -95,5 +96,20 @@ export const LABELS = {
     noDoctors: 'Chưa có bác sĩ nào',
     noPatients: 'Chưa có bệnh nhân nào',
     noWorkingDoctors: 'Chưa chọn bác sĩ làm việc',
+  },
+
+  // History
+  history: {
+    title: 'Lịch sử khám bệnh',
+    selectDate: 'Chọn ngày để xem lịch',
+    noSchedule: 'Không có lịch nào được lưu cho ngày này',
+    morning: 'Buổi sáng',
+    afternoon: 'Buổi chiều',
+    generatedAt: 'Tạo lúc',
+    scheduledTasks: 'công việc đã xếp',
+    unhandledTasks: 'không xếp được',
+    deleteSchedule: 'Xóa lịch này',
+    confirmDeleteSchedule: 'Bạn có chắc chắn muốn xóa lịch này?',
+    retentionDays: 90,
   },
 }

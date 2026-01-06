@@ -4,6 +4,7 @@ import { useApp } from '../../context/AppContext';
 import { SettingsTab } from '../settings/SettingsTab';
 import { DailyScheduleTab } from '../daily-schedule/DailyScheduleTab';
 import { ResultsTab } from '../results/ResultsTab';
+import { HistoryTab } from '../history/HistoryTab';
 
 export function PageContainer() {
   const { activeTab } = useApp();
@@ -17,6 +18,7 @@ export function PageContainer() {
           {activeTab === 'settings' && <SettingsTab />}
           {activeTab === 'daily' && <DailyScheduleTab />}
           {activeTab === 'results' && <ResultsTab />}
+          {activeTab === 'history' && <HistoryTab />}
         </div>
       </main>
     </div>

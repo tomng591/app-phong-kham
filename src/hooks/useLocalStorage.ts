@@ -38,4 +38,7 @@ export const STORAGE_KEYS = {
   AFTERNOON_PATIENTS: 'clinic-scheduler-afternoon-patients',
   AFTERNOON_WORKING_DOCTORS: 'clinic-scheduler-afternoon-working-doctors',
   AFTERNOON_MANUAL_APPOINTMENTS: 'clinic-scheduler-afternoon-manual-appointments',
+  // History
+  HISTORY_INDEX: 'clinic-scheduler-history-index',
+  HISTORY_DATA: 'clinic-scheduler-history-data',
 } as const;

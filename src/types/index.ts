@@ -51,7 +51,28 @@ export interface ScheduleResult {
   unhandled: UnhandledTask[];
 }
 
-export type TabType = 'settings' | 'daily' | 'results';
+export type TabType = 'settings' | 'daily' | 'results' | 'history';
+
+export interface ScheduleHistoryEntry {
+  id: string;
+  date: string; // YYYY-MM-DD
+  session: SessionType;
+  createdAt: string; // ISO timestamp
+  scheduleResult: ScheduleResult;
+  // Snapshot of data at time of generation
+  patients: Patient[];
+  tasks: Task[];
+  doctors: Doctor[];
+  workingDoctorIds: string[];
+}
+
+// Index for lazy loading - only stores dates that have schedules
+export interface ScheduleHistoryIndex {
+  [date: string]: {
+    morning?: string; // entry id
+    afternoon?: string; // entry id
+  };
+}
 
 export type SessionType = 'morning' | 'afternoon';
 

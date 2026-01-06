@@ -1,9 +1,11 @@
-import { createContext, useContext, ReactNode, useCallback } from 'react';
-import { Settings, Task, Doctor, Patient, ScheduleResult, TabType, SessionType, ManualAppointment } from '../types';
+import { createContext, useContext, ReactNode, useCallback, useEffect } from 'react';
+import { Settings, Task, Doctor, Patient, ScheduleResult, TabType, SessionType, ManualAppointment, ScheduleHistoryEntry, ScheduleHistoryIndex } from '../types';
 import { useLocalStorage, STORAGE_KEYS } from '../hooks/useLocalStorage';
 import { generateId } from '../utils/idGenerator';
 import { generateSchedule } from '../utils/scheduler';
 import { useState } from 'react';
+
+const RETENTION_DAYS = 90;
 
 interface SessionData {
   patients: Patient[];
@@ -56,6 +58,11 @@ interface AppContextType {
   clearSchedule: (session: SessionType) => void;
   clearAllSchedules: () => void;
 
+  // History actions
+  historyIndex: ScheduleHistoryIndex;
+  getHistoryEntry: (date: string, session: SessionType) => ScheduleHistoryEntry | null;
+  deleteHistoryEntry: (date: string, session: SessionType) => void;
+
   // Navigation
   setActiveTab: (tab: TabType) => void;
 }
@@ -104,6 +111,44 @@ export function AppProvider({ children }: { children: ReactNode }) {
     STORAGE_KEYS.AFTERNOON_MANUAL_APPOINTMENTS,
     []
   );
+
+  // History (persisted)
+  const [historyIndex, setHistoryIndex] = useLocalStorage<ScheduleHistoryIndex>(
+    STORAGE_KEYS.HISTORY_INDEX,
+    {}
+  );
+  const [historyData, setHistoryData] = useLocalStorage<ScheduleHistoryEntry[]>(
+    STORAGE_KEYS.HISTORY_DATA,
+    []
+  );
+
+  // Auto-cleanup old history entries on mount
+  useEffect(() => {
+    const cutoffDate = new Date();
+    cutoffDate.setDate(cutoffDate.getDate() - RETENTION_DAYS);
+    const cutoffStr = cutoffDate.toISOString().slice(0, 10);
+
+    // Find dates to remove
+    const datesToRemove = Object.keys(historyIndex).filter(date => date < cutoffStr);
+
+    if (datesToRemove.length > 0) {
+      // Get IDs to remove
+      const idsToRemove = new Set<string>();
+      datesToRemove.forEach(date => {
+        const entry = historyIndex[date];
+        if (entry?.morning) idsToRemove.add(entry.morning);
+        if (entry?.afternoon) idsToRemove.add(entry.afternoon);
+      });
+
+      // Update index
+      const newIndex = { ...historyIndex };
+      datesToRemove.forEach(date => delete newIndex[date]);
+      setHistoryIndex(newIndex);
+
+      // Update data
+      setHistoryData(prev => prev.filter(entry => !idsToRemove.has(entry.id)));
+    }
+  }, []); // Only run on mount
 
   // Non-persistent state
   const [morningScheduleResult, setMorningScheduleResult] = useState<ScheduleResult | null>(null);
@@ -264,6 +309,45 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
   }, [setMorningManualAppointments, setAfternoonManualAppointments]);
 
+  // History actions (defined before runScheduler since it depends on saveToHistory)
+  const saveToHistory = useCallback((session: SessionType, result: ScheduleResult) => {
+    const today = new Date().toISOString().slice(0, 10);
+    const workingDoctorIds = session === 'morning' ? morningWorkingDoctorIds : afternoonWorkingDoctorIds;
+    const patients = session === 'morning' ? morningPatients : afternoonPatients;
+    const workingDoctors = doctors.filter(d => workingDoctorIds.includes(d.id));
+
+    const entryId = generateId();
+    const newEntry: ScheduleHistoryEntry = {
+      id: entryId,
+      date: today,
+      session,
+      createdAt: new Date().toISOString(),
+      scheduleResult: result,
+      patients: [...patients],
+      tasks: [...tasks],
+      doctors: [...workingDoctors],
+      workingDoctorIds: [...workingDoctorIds],
+    };
+
+    // Check if there's an existing entry to replace
+    const existingId = historyIndex[today]?.[session];
+
+    // Update data - remove old entry if exists, add new one
+    setHistoryData(prev => {
+      const filtered = existingId ? prev.filter(e => e.id !== existingId) : prev;
+      return [...filtered, newEntry];
+    });
+
+    // Update index
+    setHistoryIndex(prev => ({
+      ...prev,
+      [today]: {
+        ...prev[today],
+        [session]: entryId,
+      },
+    }));
+  }, [doctors, tasks, morningPatients, afternoonPatients, morningWorkingDoctorIds, afternoonWorkingDoctorIds, historyIndex, setHistoryData, setHistoryIndex]);
+
   // Schedule actions
   const runScheduler = useCallback((session: SessionType) => {
     const workingDoctorIds = session === 'morning' ? morningWorkingDoctorIds : afternoonWorkingDoctorIds;
@@ -277,8 +361,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
     } else {
       setAfternoonScheduleResult(result);
     }
+
+    // Auto-save to history
+    saveToHistory(session, result);
+
     setActiveTab('results');
-  }, [settings, tasks, doctors, morningPatients, afternoonPatients, morningWorkingDoctorIds, afternoonWorkingDoctorIds, morningManualAppointments, afternoonManualAppointments]);
+  }, [settings, tasks, doctors, morningPatients, afternoonPatients, morningWorkingDoctorIds, afternoonWorkingDoctorIds, morningManualAppointments, afternoonManualAppointments, saveToHistory]);
 
   const clearSchedule = useCallback((session: SessionType) => {
     if (session === 'morning') {
@@ -292,6 +380,33 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setMorningScheduleResult(null);
     setAfternoonScheduleResult(null);
   }, []);
+
+  const getHistoryEntry = useCallback((date: string, session: SessionType): ScheduleHistoryEntry | null => {
+    const entryId = historyIndex[date]?.[session];
+    if (!entryId) return null;
+    return historyData.find(e => e.id === entryId) || null;
+  }, [historyIndex, historyData]);
+
+  const deleteHistoryEntry = useCallback((date: string, session: SessionType) => {
+    const entryId = historyIndex[date]?.[session];
+    if (!entryId) return;
+
+    // Update data
+    setHistoryData(prev => prev.filter(e => e.id !== entryId));
+
+    // Update index
+    setHistoryIndex(prev => {
+      const newIndex = { ...prev };
+      if (newIndex[date]) {
+        delete newIndex[date][session];
+        // Remove date entry if no sessions left
+        if (!newIndex[date].morning && !newIndex[date].afternoon) {
+          delete newIndex[date];
+        }
+      }
+      return newIndex;
+    });
+  }, [historyIndex, setHistoryData, setHistoryIndex]);
 
   // Session data objects
   const morning: SessionData = {
@@ -334,6 +449,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
     runScheduler,
     clearSchedule,
     clearAllSchedules,
+    historyIndex,
+    getHistoryEntry,
+    deleteHistoryEntry,
     setActiveTab,
   };
 
