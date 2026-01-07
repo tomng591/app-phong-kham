@@ -1,5 +1,6 @@
 export interface Settings {
   break_between_tasks: number; // minutes - mandatory break for patients between tasks
+  break_between_tasks_doctor: number; // minutes - mandatory break for doctors between tasks
 }
 
 export interface Task {

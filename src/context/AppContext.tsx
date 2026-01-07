@@ -71,6 +71,7 @@ const AppContext = createContext<AppContextType | null>(null);
 
 const DEFAULT_SETTINGS: Settings = {
   break_between_tasks: 5,
+  break_between_tasks_doctor: 0,
 };
 
 export function AppProvider({ children }: { children: ReactNode }) {

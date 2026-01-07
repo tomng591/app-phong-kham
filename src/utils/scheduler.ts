@@ -124,8 +124,8 @@ function validateManualAppointments(
  *    - Schedule the task
  * 6. Mark as unhandled if no doctor can perform the task
  *
- * Note: Break time is applied to patients, not doctors.
- * Doctors can work continuously, but patients need rest between tasks.
+ * Note: Break time can be configured for both patients and doctors.
+ * Patients need rest between tasks, and doctors may also need breaks between tasks.
  */
 export function generateSchedule(
   settings: Settings,
@@ -205,7 +205,7 @@ export function generateSchedule(
     const doctorState = doctorStates.get(appointment.doctor_id);
     if (doctorState) {
       doctorState.busyPeriods.push({ start: startTime, end: doctorEndTime });
-      doctorState.freeAt = Math.max(doctorState.freeAt, doctorEndTime);
+      doctorState.freeAt = Math.max(doctorState.freeAt, doctorEndTime + settings.break_between_tasks_doctor);
     }
 
     // Update patient state
@@ -255,16 +255,16 @@ export function generateSchedule(
         return null;
       }
 
-      // Check if doctor is busy during this period
+      // Check if doctor is busy during this period (considering doctor break time)
       let doctorConflict = false;
       for (const period of sortedDoctorPeriods) {
-        // Skip periods that end before our candidate starts
-        if (period.end <= candidateStart) continue;
-        // If period starts after our candidate ends, no more conflicts possible
-        if (period.start >= doctorEnd) break;
+        // Skip periods that end before our candidate starts (with break time consideration)
+        if (period.end + settings.break_between_tasks_doctor <= candidateStart) continue;
+        // If period starts after our candidate ends (with break), no more conflicts possible
+        if (period.start >= doctorEnd + settings.break_between_tasks_doctor) break;
 
         if (periodsOverlap(candidateStart, doctorEnd, period.start, period.end)) {
-          candidateStart = period.end; // Try after this busy period
+          candidateStart = period.end + settings.break_between_tasks_doctor; // Try after this busy period with break
           doctorConflict = true;
           break;
         }
@@ -354,7 +354,7 @@ export function generateSchedule(
 
       // Update states
       bestDoctor.busyPeriods.push({ start: startTime, end: doctorEndTime });
-      bestDoctor.freeAt = Math.max(bestDoctor.freeAt, doctorEndTime);
+      bestDoctor.freeAt = Math.max(bestDoctor.freeAt, doctorEndTime + settings.break_between_tasks_doctor);
       patientState.busyPeriods.push({ start: startTime, end: patientEndTime });
       patientState.freeAt = Math.max(patientState.freeAt, patientEndTime + settings.break_between_tasks);
     } else {
