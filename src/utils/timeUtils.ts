@@ -2,8 +2,8 @@ import { SessionType, SESSION_TIMES } from '../types';
 
 /**
  * Convert internal minutes (from session start) to display time (HH:MM)
- * Morning: 0 -> "07:00", 60 -> "08:00"
- * Afternoon: 0 -> "13:30", 60 -> "14:30"
+ * Morning (07:00-12:59): 0 -> "07:00", 60 -> "08:00"
+ * Afternoon (13:30-19:00): 0 -> "13:30", 60 -> "14:30"
  */
 export function minutesToTime(minutes: number, session: SessionType = 'morning'): string {
   const sessionConfig = SESSION_TIMES[session];
@@ -16,8 +16,8 @@ export function minutesToTime(minutes: number, session: SessionType = 'morning')
 
 /**
  * Convert display time (HH:MM) to internal minutes for a session
- * Morning: "07:00" -> 0, "08:00" -> 60
- * Afternoon: "13:30" -> 0, "14:30" -> 60
+ * Morning (07:00-12:59): "07:00" -> 0, "08:00" -> 60
+ * Afternoon (13:30-19:00): "13:30" -> 0, "14:30" -> 60
  */
 export function timeToMinutes(time: string, session: SessionType = 'morning'): number {
   const sessionConfig = SESSION_TIMES[session];

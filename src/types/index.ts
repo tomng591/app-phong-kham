@@ -82,15 +82,15 @@ export const SESSION_TIMES = {
   morning: {
     startHour: 7,
     startMinute: 0,
-    endHour: 11,
-    endMinute: 30,
-    durationMinutes: 270, // 4.5 hours
+    endHour: 12,
+    endMinute: 59,
+    durationMinutes: 359, // 5 hours 59 minutes
   },
   afternoon: {
     startHour: 13,
     startMinute: 30,
-    endHour: 18,
+    endHour: 19,
     endMinute: 0,
-    durationMinutes: 270, // 4.5 hours
+    durationMinutes: 330, // 5.5 hours
   },
 } as const;
