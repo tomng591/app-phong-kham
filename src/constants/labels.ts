@@ -34,6 +34,10 @@ export const LABELS = {
     patientDuration: 'Thời gian bệnh nhân (phút)',
     add: 'Thêm công việc',
     isManualSchedulable: 'Cho phép đặt lịch thủ công',
+    schedulingOrder: 'Thứ tự xếp lịch',
+    schedulingOrderNormal: 'Bình thường',
+    schedulingOrderLast: 'Luôn xếp cuối',
+    schedulingOrderLabel: 'Thứ tự',
   },
 
   // Manual Appointments

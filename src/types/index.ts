@@ -9,6 +9,7 @@ export interface Task {
   doctor_duration: number; // minutes - how long doctor is occupied
   patient_duration: number; // minutes - how long patient is occupied
   is_manual_schedulable?: boolean; // if true, can be manually scheduled with specific time/doctor
+  scheduling_order?: 'normal' | 'last'; // default: 'normal'
 }
 
 export interface ManualAppointment {

@@ -138,6 +138,10 @@ export function generateSchedule(
   const scheduled: ScheduledTask[] = [];
   const unhandled: UnhandledTask[] = [];
 
+  // Default settings values for backwards compatibility
+  const breakBetweenTasks = settings.break_between_tasks ?? 5;
+  const breakBetweenTasksDoctor = settings.break_between_tasks_doctor ?? 0;
+
   // Build lookup maps
   const taskMap = new Map<string, Task>();
   tasks.forEach((t) => taskMap.set(t.id, t));
@@ -205,14 +209,14 @@ export function generateSchedule(
     const doctorState = doctorStates.get(appointment.doctor_id);
     if (doctorState) {
       doctorState.busyPeriods.push({ start: startTime, end: doctorEndTime });
-      doctorState.freeAt = Math.max(doctorState.freeAt, doctorEndTime + settings.break_between_tasks_doctor);
+      doctorState.freeAt = Math.max(doctorState.freeAt, doctorEndTime + breakBetweenTasksDoctor);
     }
 
     // Update patient state
     const patientState = patientStates.get(appointment.patient_id);
     if (patientState) {
       patientState.busyPeriods.push({ start: startTime, end: patientEndTime });
-      patientState.freeAt = Math.max(patientState.freeAt, patientEndTime + settings.break_between_tasks);
+      patientState.freeAt = Math.max(patientState.freeAt, patientEndTime + breakBetweenTasks);
     }
 
     // Mark as manually scheduled
@@ -220,25 +224,34 @@ export function generateSchedule(
   }
 
   // Build queue of remaining (patient, task) pairs (excluding manually scheduled)
-  const queue: { patientId: string; taskId: string }[] = [];
+  // Two-pass: normal tasks first, then 'last' tasks
+  const normalQueue: { patientId: string; taskId: string }[] = [];
+  const lastQueue: { patientId: string; taskId: string }[] = [];
   patients.forEach((patient) => {
     patient.needs.forEach((taskId) => {
       const pairKey = `${patient.id}-${taskId}`;
       if (!manuallyScheduledPairs.has(pairKey)) {
-        queue.push({ patientId: patient.id, taskId });
+        const task = taskMap.get(taskId);
+        if (task?.scheduling_order === 'last') {
+          lastQueue.push({ patientId: patient.id, taskId });
+        } else {
+          normalQueue.push({ patientId: patient.id, taskId });
+        }
       }
     });
   });
+  const queue = [...normalQueue, ...lastQueue];
 
   // Helper to find earliest available slot for a doctor considering busy periods
   const findEarliestSlot = (
     doctorState: DoctorState,
     patientState: PatientState,
     doctorDuration: number,
-    patientDuration: number
+    patientDuration: number,
+    minStart: number = 0
   ): number | null => {
-    // Start from 0 to find gaps between busy periods (not from freeAt which would miss gaps)
-    let candidateStart = 0;
+    // Start from minStart to find gaps between busy periods (not from freeAt which would miss gaps)
+    let candidateStart = minStart;
     const sessionDuration = SESSION_TIMES[session].durationMinutes;
     const maxIterations = 200; // Safety limit (increased for more complex schedules)
 
@@ -259,12 +272,12 @@ export function generateSchedule(
       let doctorConflict = false;
       for (const period of sortedDoctorPeriods) {
         // Skip periods that end before our candidate starts (with break time consideration)
-        if (period.end + settings.break_between_tasks_doctor <= candidateStart) continue;
+        if (period.end + breakBetweenTasksDoctor <= candidateStart) continue;
         // If period starts after our candidate ends (with break), no more conflicts possible
-        if (period.start >= doctorEnd + settings.break_between_tasks_doctor) break;
+        if (period.start >= doctorEnd + breakBetweenTasksDoctor) break;
 
         if (periodsOverlap(candidateStart, doctorEnd, period.start, period.end)) {
-          candidateStart = period.end + settings.break_between_tasks_doctor; // Try after this busy period with break
+          candidateStart = period.end + breakBetweenTasksDoctor; // Try after this busy period with break
           doctorConflict = true;
           break;
         }
@@ -275,12 +288,12 @@ export function generateSchedule(
       let patientConflict = false;
       for (const period of sortedPatientPeriods) {
         // Skip periods that end before our candidate starts (with break time consideration)
-        if (period.end + settings.break_between_tasks <= candidateStart) continue;
+        if (period.end + breakBetweenTasks <= candidateStart) continue;
         // If period starts after our candidate ends (with break), no more conflicts possible
-        if (period.start >= patientEnd + settings.break_between_tasks) break;
+        if (period.start >= patientEnd + breakBetweenTasks) break;
 
         if (periodsOverlap(candidateStart, patientEnd, period.start, period.end)) {
-          candidateStart = period.end + settings.break_between_tasks; // Try after this busy period with break
+          candidateStart = period.end + breakBetweenTasks; // Try after this busy period with break
           patientConflict = true;
           break;
         }
@@ -325,12 +338,15 @@ export function generateSchedule(
       continue;
     }
 
+    // For 'last' tasks, start searching from after the patient's last scheduled task
+    const minStart = task.scheduling_order === 'last' ? patientState.freeAt : 0;
+
     // Find doctor with earliest possible start time (considering busy periods)
     let bestDoctor: DoctorState | null = null;
     let earliestStart: number | null = null;
 
     for (const doctor of capableDoctors) {
-      const slot = findEarliestSlot(doctor, patientState, task.doctor_duration, task.patient_duration);
+      const slot = findEarliestSlot(doctor, patientState, task.doctor_duration, task.patient_duration, minStart);
       if (slot !== null && (earliestStart === null || slot < earliestStart)) {
         earliestStart = slot;
         bestDoctor = doctor;
@@ -354,9 +370,9 @@ export function generateSchedule(
 
       // Update states
       bestDoctor.busyPeriods.push({ start: startTime, end: doctorEndTime });
-      bestDoctor.freeAt = Math.max(bestDoctor.freeAt, doctorEndTime + settings.break_between_tasks_doctor);
+      bestDoctor.freeAt = Math.max(bestDoctor.freeAt, doctorEndTime + breakBetweenTasksDoctor);
       patientState.busyPeriods.push({ start: startTime, end: patientEndTime });
-      patientState.freeAt = Math.max(patientState.freeAt, patientEndTime + settings.break_between_tasks);
+      patientState.freeAt = Math.max(patientState.freeAt, patientEndTime + breakBetweenTasks);
     } else {
       unhandled.push({
         patient_id: patientId,

@@ -44,6 +44,11 @@ export function TaskManagement() {
     { header: LABELS.task.name, accessor: 'name' as const },
     { header: LABELS.task.doctorDuration, accessor: 'doctor_duration' as const },
     { header: LABELS.task.patientDuration, accessor: 'patient_duration' as const },
+    {
+      header: LABELS.task.schedulingOrderLabel,
+      accessor: (task: Task) =>
+        task.scheduling_order === 'last' ? LABELS.task.schedulingOrderLast : '—',
+    },
   ];
 
   return (

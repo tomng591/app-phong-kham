@@ -21,6 +21,9 @@ export function TaskForm({ initialData, onSave, onCancel }: TaskFormProps) {
   const [isManualSchedulable, setIsManualSchedulable] = useState(
     initialData?.is_manual_schedulable || false
   );
+  const [schedulingOrder, setSchedulingOrder] = useState<'normal' | 'last'>(
+    initialData?.scheduling_order || 'normal'
+  );
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -31,6 +34,7 @@ export function TaskForm({ initialData, onSave, onCancel }: TaskFormProps) {
       doctor_duration: parseInt(doctorDuration) || 30,
       patient_duration: parseInt(patientDuration) || 30,
       is_manual_schedulable: isManualSchedulable,
+      scheduling_order: schedulingOrder,
     });
   };
 
@@ -74,6 +78,21 @@ export function TaskForm({ initialData, onSave, onCancel }: TaskFormProps) {
         <label htmlFor="isManualSchedulable" className="text-sm font-medium text-gray-700">
           {LABELS.task.isManualSchedulable}
         </label>
+      </div>
+
+      <div>
+        <label htmlFor="schedulingOrder" className="block text-sm font-medium text-gray-700 mb-1">
+          {LABELS.task.schedulingOrder}
+        </label>
+        <select
+          id="schedulingOrder"
+          value={schedulingOrder}
+          onChange={(e) => setSchedulingOrder(e.target.value as 'normal' | 'last')}
+          className="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm py-2 px-3 border"
+        >
+          <option value="normal">{LABELS.task.schedulingOrderNormal}</option>
+          <option value="last">{LABELS.task.schedulingOrderLast}</option>
+        </select>
       </div>
 
       <div className="flex justify-end gap-3 pt-4">
